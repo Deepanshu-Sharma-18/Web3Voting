@@ -19,9 +19,11 @@ contract Election {
     ElectionData[] public elections;
 
     struct VoterData{
-        uint index;
+        address user;
         bool hasVoted;
     }
+
+    mapping(uint => VoterData[]) voters;
 
     mapping(uint => mapping(address => bool)) votersIdentity;
     mapping(uint => Candidate[]) candidates;
@@ -44,6 +46,7 @@ contract Election {
         require(msg.sender == election.owner, "Only the owner can add voters.");
         require(!votersIdentity[electionIndex][voter] == true, "The voter has already been added.");
         votersIdentity[electionIndex][voter] = false;
+        voters[electionIndex].push(VoterData(voter,false));
         emit VoterAdded(electionIndex, voter);
     }
 
@@ -56,8 +59,15 @@ contract Election {
         ElectionData storage election = elections[electionIndex];
         require(!votersIdentity[electionIndex][msg.sender] == true, "The voter has already voted.");
         require(election.isActive, "This election is not active.");
+        bool valid =false;
+        for(uint i=0;i<voters[electionIndex].length;i++){
+            if(voters[electionIndex][i].user == msg.sender){
+                valid = true;
+                voters[electionIndex][i].hasVoted = true;
+            }
+        }
+         require(valid == true, "the Voter is not added.");
         votersIdentity[electionIndex][msg.sender] = true;
-       
         candidates[electionIndex][candidateIndex].voteCount++;
         emit VoteCast(electionIndex, candidateIndex);
     }
@@ -80,7 +90,13 @@ contract Election {
         return elections.length;
     }
     
-    function getElection(uint electionIndex) public view returns (Candidate[] memory) {
-        return (candidates[electionIndex]);
+    function getElection(uint electionIndex) public view returns (ElectionData memory,Candidate[] memory) {
+        return (elections[electionIndex],candidates[electionIndex]);
     }
+
+    function getVotersStatus(uint electionIndex) public view returns (VoterData[] memory) {
+        return voters[electionIndex];
+    }
+    
 }
+
